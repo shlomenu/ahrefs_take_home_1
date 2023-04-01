@@ -1,0 +1,4 @@
+(library
+ (name chat)
+ (libraries unix domainslib logs mtime mtime.clock.os)
+ (modules node config message file_reporter))
