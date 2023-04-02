@@ -3,11 +3,9 @@ type t = Logs.reporter
 let stamp_tag : Mtime.span Logs.Tag.def =
   Logs.Tag.def "stamp" ~doc:"Relative monotonic time stamp" Mtime.Span.pp
 
-let stamp_of_span s = Logs.Tag.(add stamp_tag s empty)
+let stamp c = Logs.Tag.(add stamp_tag (Mtime_clock.count c) empty)
 
-let stamp_of_counter c = Logs.Tag.(add stamp_tag (Mtime_clock.count c) empty)
-
-let reporter ppf : Logs.reporter =
+let make ppf : Logs.reporter =
   { report=
       (fun _ level ~over k msgf ->
         msgf
@@ -20,7 +18,3 @@ let reporter ppf : Logs.reporter =
              ppf
              ("%a[%0+4.0fus] @[" ^^ fmt ^^ "@]@.")
              Logs.pp_header (level, header) ) }
-
-let make fn : Out_channel.t * Logs.reporter =
-  let rc = Out_channel.open_text fn in
-  (rc, reporter @@ Format.formatter_of_out_channel rc)

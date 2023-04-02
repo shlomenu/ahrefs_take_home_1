@@ -27,23 +27,27 @@ type t = {id: Digest.t; time: Mtime.span; body: Body.t}
 
 let to_key msg = (msg.time, msg.id)
 
-let create (ic : In_channel.t) (max_msg_len : int) (clock : Mtime_clock.counter)
-    (enc : Config.encoding) : t option =
-  let b = Bytes.create max_msg_len in
-  let bytes_read = In_channel.input ic b 0 max_msg_len in
-  if bytes_read <> 0 then (
-    let b' = Bytes.create bytes_read in
-    Bytes.blit b 0 b' 0 bytes_read ;
-    Some
-      { id= Digest.bytes b'
-      ; time= Mtime_clock.count clock
-      ; body=
-          ( match enc with
-          | Bin ->
-              Body.Bin b'
-          | Text ->
-              Body.Text (Bytes.to_string b') ) } )
-  else None
+let to_identifier msg =
+  Printf.sprintf "%f-%s"
+    (Mtime.Span.to_float_ns msg.time)
+    (Digest.to_hex msg.id)
+
+let create (ic : In_channel.t) (oc : Out_channel.t)
+    (clock : Mtime_clock.counter) (enc : Config.encoding) : t option =
+  Out_channel.output_string oc "msg: " ;
+  Out_channel.flush oc ;
+  Option.bind (In_channel.input_line ic) (fun s ->
+      if String.length s > 0 then
+        Some
+          { id= Digest.string s
+          ; time= Mtime_clock.count clock
+          ; body=
+              ( match enc with
+              | Bin ->
+                  Body.Bin (Bytes.of_string s)
+              | Text ->
+                  Body.Text s ) }
+      else None )
 
 let read (ic : In_channel.t) : t =
   let id = Digest.input ic in

@@ -1,0 +1,8 @@
+[INFO][+129000us] connected to 172.21.162.135 at port 8126
+[DEBUG][+470300us] conversation opened
+[DEBUG][+753900us] beginning to read STDIN for messages
+[DEBUG][+943200us] beginning to read from socket for messages
+[INFO][+42781959200us] created message C-42781941000.000000-a00a953d8cdbb6f11ba90b488ff699d5 from console input with contents: hey there!  It's Eli.
+[INFO][+42782339500us] read message C-42781941000.000000-a00a953d8cdbb6f11ba90b488ff699d5 from communication channel with contents: <acknowledgement>
+[INFO][+85046217500us] read message C-93470169500.000000-807dd8ef5a1b3617bc9cd347a06f72fb from communication channel with contents: I saw your message, this is also Eli.  What a coincidence!
+Fatal error: exception Stdlib.Sys.Break

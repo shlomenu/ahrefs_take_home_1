@@ -8,6 +8,7 @@ depends: [
   "ocaml" {= "5.0.0"}
   "dune" {>= "3.7"}
   "unix"
+  "extunix"
   "domainslib"
   "logs"
   "mtime"

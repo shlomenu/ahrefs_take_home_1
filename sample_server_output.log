@@ -1,0 +1,9 @@
+[INFO][+23200us] listening at port 8126 on: eth0 (172.21.162.135).
+[INFO][+8424353900us] accepted connection from 172.21.162.135 outgoing from port 38840
+[DEBUG][+8424686800us] conversation opened
+[DEBUG][+8424962000us] beginning to read STDIN for messages
+[DEBUG][+8425093800us] beginning to read from socket for messages
+[INFO][+51206332200us] read message S-42781941000.000000-a00a953d8cdbb6f11ba90b488ff699d5 from communication channel with contents: hey there!  It's Eli.
+[INFO][+93470187900us] created message S-93470169500.000000-807dd8ef5a1b3617bc9cd347a06f72fb from console input with contents: I saw your message, this is also Eli.  What a coincidence!
+[INFO][+93470632500us] read message S-93470169500.000000-807dd8ef5a1b3617bc9cd347a06f72fb from communication channel with contents: <acknowledgement>
+Fatal error: exception Stdlib.Sys.Break

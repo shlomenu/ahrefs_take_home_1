@@ -16,10 +16,14 @@ module Mutex = struct
     Fun.protect ~finally:(fun () -> unlock lk) (fun () -> lock lk ; f ())
 end
 
-type role =
-  | Client of Unix.sockaddr (* client of server at (1) *)
-  | Server of (Unix.sockaddr * Unix.sockaddr)
-(* server at (1) with client at (2) *)
+module Role = struct
+  type t =
+    | Client of Unix.sockaddr (* client of server at (1) *)
+    | Server of (Unix.sockaddr * Unix.sockaddr)
+  (* server at (1) with client at (2) *)
+
+  let to_prefix = function Client _ -> "C" | Server _ -> "S"
+end
 
 module SpanDigestMap = Map.Make (struct
   type t = Mtime.Span.t * Digest.t
@@ -37,10 +41,8 @@ type t =
   ; out_acks_lk: Mutex.t
   ; in_acks: bool SpanDigestMap.t ref
   ; in_acks_lk: Mutex.t
-  ; logs_oc: Out_channel.t
-  ; max_msg_len: int
   ; enc: Config.encoding
-  ; role: role
+  ; role: Role.t
   ; comms_ic: In_channel.t
   ; comms_oc: Out_channel.t
   ; comms_oc_lk: Mutex.t
@@ -49,43 +51,60 @@ type t =
 
 let establish_chat (config : Config.t) (my_inet_addr : Unix.inet_addr)
     (role : [`Client | `Server]) : t =
+  Logs.set_reporter @@ Reporter.make Format.err_formatter ;
+  let reporting_lk = Mutex.create () in
+  Logs.set_reporter_mutex
+    ~lock:(fun () -> Mutex.lock reporting_lk)
+    ~unlock:(fun () -> Mutex.unlock reporting_lk) ;
+  Logs.set_level ~all:true
+    (if config.debug then Some Logs.Debug else Some Logs.Info) ;
+  let clock = Mtime_clock.counter () in
   let role, in_descr, out_descr =
     match role with
     | `Server ->
-        let sock = Unix.socket ~cloexec:true Unix.PF_INET6 Unix.SOCK_STREAM 0 in
+        let sock = Unix.socket ~cloexec:true Unix.PF_INET Unix.SOCK_STREAM 0 in
+        let my_addrs = ExtUnix.All.Ioctl.siocgifconf ~sock in
         let my_sockaddr = Unix.ADDR_INET (my_inet_addr, config.port) in
         Unix.bind sock my_sockaddr ;
         Unix.listen sock 1 ;
-        let in_descr, client_sockaddr = Unix.accept ~cloexec:true sock in
+        Logs.info (fun m ->
+            m "listening at port %d on: %s." config.port
+              ( String.concat "; "
+              @@ ListLabels.map ~f:(fun x ->
+                     Printf.sprintf "%s (%s)" (fst x) (snd x) )
+              @@ ListLabels.filter my_addrs ~f:(fun x -> fst x <> "lo") )
+              ~tags:(Reporter.stamp clock) ) ;
+        let[@warning "-8"] ( in_descr
+                           , ( Unix.ADDR_INET (their_inet_addr, their_port) as
+                             client_sockaddr ) ) =
+          Unix.accept ~cloexec:true sock
+        in
+        Logs.info (fun m ->
+            m "accepted connection from %s outgoing from port %d"
+              (Unix.string_of_inet_addr their_inet_addr)
+              their_port ~tags:(Reporter.stamp clock) ) ;
         let out_descr = Unix.dup ~cloexec:true in_descr in
-        (Server (my_sockaddr, client_sockaddr), in_descr, out_descr)
+        (Role.Server (my_sockaddr, client_sockaddr), in_descr, out_descr)
     | `Client ->
-        let sock = Unix.socket Unix.PF_INET6 Unix.SOCK_STREAM 0 in
+        let sock = Unix.socket Unix.PF_INET Unix.SOCK_STREAM 0 in
         let my_sockaddr = Unix.ADDR_INET (my_inet_addr, config.port) in
         Unix.connect sock my_sockaddr ;
-        (Client my_sockaddr, sock, Unix.dup sock)
+        Logs.info (fun m ->
+            m "connected to %s at port %d"
+              (Unix.string_of_inet_addr my_inet_addr)
+              config.port ~tags:(Reporter.stamp clock) ) ;
+        (Role.Client my_sockaddr, sock, Unix.dup sock)
   in
   { in_acks= ref SpanDigestMap.empty
   ; in_acks_lk= Mutex.create ()
   ; out_acks= ref SpanDigestMap.empty
   ; out_acks_lk= Mutex.create ()
-  ; logs_oc=
-      (let logs_oc, reporter = File_reporter.make config.log_file in
-       Logs.set_reporter reporter ;
-       let reporting_lk = Mutex.create () in
-       Logs.set_reporter_mutex
-         ~lock:(fun () -> Mutex.lock reporting_lk)
-         ~unlock:(fun () -> Mutex.unlock reporting_lk) ;
-       Logs.set_level ~all:true
-         (if config.debug then Some Logs.Debug else Some Logs.Info) ;
-       logs_oc )
-  ; max_msg_len= config.max_msg_len
   ; enc= config.enc
   ; role
   ; comms_ic= Unix.in_channel_of_descr in_descr
   ; comms_oc= Unix.out_channel_of_descr out_descr
   ; comms_oc_lk= Mutex.create ()
-  ; clock= Mtime_clock.counter ()
+  ; clock
   ; n_domains= config.n_domains }
 
 let mark ~(f : bool option -> bool option) (lk : Mutex.t)
@@ -117,24 +136,24 @@ let mark_out_acked node = mark_acked node.out_acks_lk node.out_acks
 let mark_in_acked node = mark_acked node.in_acks_lk node.in_acks
 
 let read_outgoing node =
-  Fun.flip Option.map
-    (Message.create stdin node.max_msg_len node.clock node.enc) (fun msg ->
+  Fun.flip Option.map (Message.create stdin stdout node.clock node.enc)
+    (fun msg ->
       Logs.info (fun m ->
-          m "created message M-%f-%s from console input with contents: %s"
-            (Mtime.Span.to_float_ns msg.time)
-            (Digest.to_hex msg.id)
+          m "created message %s-%s from console input with contents: %s"
+            (Role.to_prefix node.role)
+            (Message.to_identifier msg)
             (Message.Body.to_string msg.body)
-            ~tags:(File_reporter.stamp_of_counter node.clock) ) ;
+            ~tags:(Reporter.stamp node.clock) ) ;
       msg )
 
 let read_incoming node =
   let msg = Message.read node.comms_ic in
   Logs.info (fun m ->
-      m "read message Y-%f-%s from communication channel with contents: %s"
-        (Mtime.Span.to_float_ns msg.time)
-        (Digest.to_hex msg.id)
+      m "read message %s-%s from communication channel with contents: %s"
+        (Role.to_prefix node.role)
+        (Message.to_identifier msg)
         (Message.Body.to_string msg.body)
-        ~tags:(File_reporter.stamp_of_counter node.clock) ) ;
+        ~tags:(Reporter.stamp node.clock) ) ;
   msg
 
 let send_outgoing node msg =
@@ -177,7 +196,7 @@ let report_unacknowledged node =
               "acknowledgement of incoming message Y-%f-%s was not sent prior \
                to shutdown"
               (Mtime.Span.to_float_ns s) (Digest.to_hex d)
-              ~tags:(File_reporter.stamp_of_counter node.clock) ) ) ;
+              ~tags:(Reporter.stamp node.clock) ) ) ;
   SpanDigestMap.iter !(node.out_acks) ~f:(fun ~key:(s, d) ~data ->
       if not data then
         Logs.warn (fun m ->
@@ -185,19 +204,28 @@ let report_unacknowledged node =
               "acknowledgement of outgoing message M-%f-%s was not received \
                prior to shutdown"
               (Mtime.Span.to_float_ns s) (Digest.to_hex d)
-              ~tags:(File_reporter.stamp_of_counter node.clock) ) )
+              ~tags:(Reporter.stamp node.clock) ) )
 
 let converse (node : t) : unit =
+  Logs.debug (fun m ->
+      m "conversation opened" ~tags:(Reporter.stamp node.clock) ) ;
   let pool = T.setup_pool ~num_domains:(node.n_domains - 1) () in
   Sys.catch_break true ;
   Fun.protect
     ~finally:(fun () ->
       report_unacknowledged node ;
       Out_channel.close node.comms_oc ;
-      Out_channel.close node.logs_oc ;
       T.teardown_pool pool )
     (fun () ->
       T.run pool (fun () ->
           T.split pool
-            (fun () -> handle_outgoing pool node)
-            (fun () -> handle_incoming pool node) ) )
+            (fun () ->
+              Logs.debug (fun m ->
+                  m "beginning to read STDIN for messages"
+                    ~tags:(Reporter.stamp node.clock) ) ;
+              handle_outgoing pool node )
+            (fun () ->
+              Logs.debug (fun m ->
+                  m "beginning to read from socket for messages"
+                    ~tags:(Reporter.stamp node.clock) ) ;
+              handle_incoming pool node ) ) )

@@ -18,6 +18,7 @@
    (= "5.0.0"))
   dune
   unix
+  extunix
   domainslib
   logs
   mtime
