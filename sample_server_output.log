@@ -1,9 +1,12 @@
-[INFO][+23200us] listening at port 8126 on: eth0 (172.21.162.135).
-[INFO][+8424353900us] accepted connection from 172.21.162.135 outgoing from port 38840
-[DEBUG][+8424686800us] conversation opened
-[DEBUG][+8424962000us] beginning to read STDIN for messages
-[DEBUG][+8425093800us] beginning to read from socket for messages
-[INFO][+51206332200us] read message S-42781941000.000000-a00a953d8cdbb6f11ba90b488ff699d5 from communication channel with contents: hey there!  It's Eli.
-[INFO][+93470187900us] created message S-93470169500.000000-807dd8ef5a1b3617bc9cd347a06f72fb from console input with contents: I saw your message, this is also Eli.  What a coincidence!
-[INFO][+93470632500us] read message S-93470169500.000000-807dd8ef5a1b3617bc9cd347a06f72fb from communication channel with contents: <acknowledgement>
+[INFO][+24000us] listening at port 8126 on: eth0 (172.21.162.135).
+[INFO][+8312017200us] accepted connection from 172.21.162.135 outgoing from port 38860
+[DEBUG][+8312280500us] conversation opened
+[DEBUG][+8312492300us] beginning to read STDIN for messages
+[DEBUG][+8312587600us] beginning to read from socket for messages
+[INFO][+41686597900us] created message S-41686581200.000000-9dbb0eb9094f1b52b07f27022469da12 from console input with contents: Hey client-eli, how's it going?
+[INFO][+41686864000us] read message S-41686581200.000000-9dbb0eb9094f1b52b07f27022469da12 from communication channel with contents: <acknowledgement>
+[INFO][+78037830900us] read message C-69725677300.000000-dfe7db5d26e3c56c8fa7c6a92794033d from communication channel with contents: Hi server-eli, it's going fine.  Just glad this thing is finally working, it's quite satisfying!
+[INFO][+88613831500us] created message S-88613811100.000000-9361551661bb180b7a4981c09c893813 from console input with contents: What's a follow up..
+[INFO][+88614184500us] read message S-88613811100.000000-9361551661bb180b7a4981c09c893813 from communication channel with contents: <acknowledgement>
+[INFO][+99966478500us] read message C-91654305800.000000-40957fa47bc11f21ff56796930840c18 from communication channel with contents: Let's just take it offline
 Fatal error: exception Stdlib.Sys.Break

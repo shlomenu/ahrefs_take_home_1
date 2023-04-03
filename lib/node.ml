@@ -22,7 +22,23 @@ module Role = struct
     | Server of (Unix.sockaddr * Unix.sockaddr)
   (* server at (1) with client at (2) *)
 
-  let to_prefix = function Client _ -> "C" | Server _ -> "S"
+  let to_prefix ~(src : [`Outgoing | `Incoming]) (role : t)
+      (body : Message.Body.t) =
+    match (src, role, body) with
+    | `Outgoing, Server _, (Bin _ | Text _) ->
+        "S"
+    | `Outgoing, Client _, (Bin _ | Text _) ->
+        "C"
+    | `Outgoing, _, Ack ->
+        failwith "outgoing acknowledgement"
+    | `Incoming, Server _, Ack ->
+        "S"
+    | `Incoming, Server _, _ ->
+        "C"
+    | `Incoming, Client _, Ack ->
+        "C"
+    | `Incoming, Client _, _ ->
+        "S"
 end
 
 module SpanDigestMap = Map.Make (struct
@@ -140,7 +156,7 @@ let read_outgoing node =
     (fun msg ->
       Logs.info (fun m ->
           m "created message %s-%s from console input with contents: %s"
-            (Role.to_prefix node.role)
+            (Role.to_prefix ~src:`Outgoing node.role msg.body)
             (Message.to_identifier msg)
             (Message.Body.to_string msg.body)
             ~tags:(Reporter.stamp node.clock) ) ;
@@ -150,7 +166,7 @@ let read_incoming node =
   let msg = Message.read node.comms_ic in
   Logs.info (fun m ->
       m "read message %s-%s from communication channel with contents: %s"
-        (Role.to_prefix node.role)
+        (Role.to_prefix ~src:`Incoming node.role msg.body)
         (Message.to_identifier msg)
         (Message.Body.to_string msg.body)
         ~tags:(Reporter.stamp node.clock) ) ;

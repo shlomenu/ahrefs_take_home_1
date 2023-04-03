@@ -1,8 +1,11 @@
-[INFO][+129000us] connected to 172.21.162.135 at port 8126
-[DEBUG][+470300us] conversation opened
-[DEBUG][+753900us] beginning to read STDIN for messages
-[DEBUG][+943200us] beginning to read from socket for messages
-[INFO][+42781959200us] created message C-42781941000.000000-a00a953d8cdbb6f11ba90b488ff699d5 from console input with contents: hey there!  It's Eli.
-[INFO][+42782339500us] read message C-42781941000.000000-a00a953d8cdbb6f11ba90b488ff699d5 from communication channel with contents: <acknowledgement>
-[INFO][+85046217500us] read message C-93470169500.000000-807dd8ef5a1b3617bc9cd347a06f72fb from communication channel with contents: I saw your message, this is also Eli.  What a coincidence!
+[INFO][+90400us] connected to 172.21.162.135 at port 8126
+[DEBUG][+351300us] conversation opened
+[DEBUG][+582500us] beginning to read STDIN for messages
+[DEBUG][+696000us] beginning to read from socket for messages
+[INFO][+33374842600us] read message S-41686581200.000000-9dbb0eb9094f1b52b07f27022469da12 from communication channel with contents: Hey client-eli, how's it going?
+[INFO][+69725696500us] created message C-69725677300.000000-dfe7db5d26e3c56c8fa7c6a92794033d from console input with contents: Hi server-eli, it's going fine.  Just glad this thing is finally working, it's quite satisfying!
+[INFO][+69726107800us] read message C-69725677300.000000-dfe7db5d26e3c56c8fa7c6a92794033d from communication channel with contents: <acknowledgement>
+[INFO][+80302117300us] read message S-88613811100.000000-9361551661bb180b7a4981c09c893813 from communication channel with contents: What's a follow up..
+[INFO][+91654347600us] created message C-91654305800.000000-40957fa47bc11f21ff56796930840c18 from console input with contents: Let's just take it offline
+[INFO][+91654661300us] read message C-91654305800.000000-40957fa47bc11f21ff56796930840c18 from communication channel with contents: <acknowledgement>
 Fatal error: exception Stdlib.Sys.Break
