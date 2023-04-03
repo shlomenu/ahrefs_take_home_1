@@ -1,5 +1,7 @@
 # Ahrefs Take-Home Test
 
+## Description 
+
 Simple one on one chat.
 
 
@@ -21,4 +23,24 @@ Requirements:
 - You may use any 3rd-party general-purpose libraries (extlib, containers, lwt, etc)
 - Primary objectives: robustness, code simplicity and maintainability
 
-Good luck.
+## Implementation
+
+This repo provides a command line utility for a two-way chat.  On a UNIX system with opam installed within an OCaml 5.0.0 switch, the following command should succeed: 
+
+```
+$ dune exec ahrefs_take_home_1 -- -help 
+```
+
+This should display the full set of options.  The chat application utilizes standard input/output for message input and emits received messages, message acknowledgements and other logs on standard error.  It is therefore recommended, when testing, to redirect standard error to a file (it is easy to see the contents of this file as they appear by opening the file in VSCode, for example).  A full fledged command to launch a chat server might then look like this:
+
+```
+$ dune exec ahrefs_take_home_1 -- -s --decode-text 2> server.log
+```
+
+A chat client can then be launched by running this command from a separate process:
+
+```
+$ dune exec ahrefs_take_home_1 -- -c -a YOUR_IPV4_ADDR_HERE --decode-text 2> client.log
+```
+
+If you don't know your computer's current IP addresses, the server will emit logs containing all of the host's non-loopback network interfaces and their current IP addresses as soon as it begins listening for connection requests.
